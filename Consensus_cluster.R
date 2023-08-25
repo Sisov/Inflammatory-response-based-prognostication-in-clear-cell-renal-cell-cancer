@@ -1,4 +1,35 @@
-#聚类
+#Clustering
+gene<-read.table("gene.txt",header=F,sep="\t",check.names=F)
+dat<-read.table("uniq.symbol.txt",head=T,sep='\t',check.names=F,row.names=1)
+expr<-dat[intersect(gene$VA,row.names(dat),]
+time<-read.table("time.txt",head=T,sep='\t',check.names=F,row.names=1)
+expr<-expr[,intersect(row.names(time),colnames(expr)]
+
+library(survival)
+pFilter=0.05                                                    
+rt=cbind(time,t(expr))    
+outTab=data.frame()
+sigGenes=c("futime","fustat")
+for(i in colnames(rt[,3:ncol(rt)])){
+ cox <- coxph(Surv(futime, fustat) ~ rt[,i], data = rt)
+ coxSummary = summary(cox)
+ coxP=coxSummary$coefficients[,"Pr(>|z|)"]
+ if(coxP<pFilter){
+     sigGenes=c(sigGenes,i)
+		 outTab=rbind(outTab,
+		              cbind(id=i,
+		              HR=coxSummary$conf.int[,"exp(coef)"],
+		              HR.95L=coxSummary$conf.int[,"lower .95"],
+		              HR.95H=coxSummary$conf.int[,"upper .95"],
+		              pvalue=coxSummary$coefficients[,"Pr(>|z|)"])
+		              )
+  }
+}
+write.table(outTab,file="uniCox.txt",sep="\t",row.names=F,quote=F)
+uniSigExp=rt[,sigGenes]
+uniSigExp=cbind(id=row.names(uniSigExp),uniSigExp)
+write.table(uniSigExp,file="uniSigExp.txt",sep="\t",row.names=F,quote=F)
+
 data<-read.table("uniSigExp.txt",head=T,sep='\t',check.names=F,row.names=1)
 ata<-as.matrix(data)
 maxK=9
@@ -24,7 +55,7 @@ for(i in Kvec){
   PAC[i-1] = Fn(x2) - Fn(x1)}#end for i# The optimal K
 optK = Kvec[which.min(PAC)]#输出最佳K值
 #输出结果
-clusterNum=optK                  #分几类，根据判断标准判断
+clusterNum=optK                 
 cluster=results[[clusterNum]][["consensusClass"]]
 write.table(cluster,file="cluster.txt",sep="\t",quote=F,col.names=F)
 
